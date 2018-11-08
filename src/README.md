@@ -1,11 +1,9 @@
-**************************************************
-*                                                *
-*          Project 1: Write a Shell              *
-*                                                *
-**************************************************
+# Project 1: Write a Shell
+
 Team members: Xiaoshi Wang, Yuchen Sun
 
-1. Directory Structure
+## Directory Structure
+```
 -xwcsshell
 	-install
 		-bin
@@ -30,12 +28,12 @@ Team members: Xiaoshi Wang, Yuchen Sun
 		-docs
 		Makefile
 		README
+```
 
-
-
-2. User Manual
+## User Manual
 	The Makefile in the top level of src directory is designed for creating the executable and proceeding other instructions in the more efficient way. The following shows commands provided by our Makefile. Notice that those commands should be executed at the src directory.
 
+```
 	make
 		build .o files in LSHPATH/lsh/src/obj folder, then create the excutable in LSHPATH/lsh/install/bin
 
@@ -54,3 +52,4 @@ Team members: Xiaoshi Wang, Yuchen Sun
 
 	make installman
 		isntall the man xwcsshell.1 into the user's computer
+```
