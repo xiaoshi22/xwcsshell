@@ -5,7 +5,6 @@ Team members: Xiaoshi Wang, Yuchen Sun
 xwcsshell
 ├── install
 │   ├── bin
-│   │   ├── a.out
 │   │   ├── myspin
 │   │   ├── myspin.c
 │   │   └── shell
