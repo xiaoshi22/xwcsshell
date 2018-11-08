@@ -1,7 +1,5 @@
 
-# Project Requirements
-
-# Project 1: Write a Shell
+# Requirements for Project 1 - Write a Shell
 ## Purpose
 
 The purpose of this project is to improve your C and system programming skills, and increase your understanding of the Unix programming environment, in particular shells.  You will create, monitor, and report on processes in Linux.  You will also create pipelines, and develop a better understanding of stdin, stdout, stderr, PATH, and environment variables.
