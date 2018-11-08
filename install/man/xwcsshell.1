@@ -1,0 +1,824 @@
+.\"
+.\" MAN PAGE COMMENTS to
+.\"
+.\"	Xiaoshi Wang
+.\"	Lafayette College
+.\"	wangxi@lafayette.edu
+.\"
+.\"	Yuchen Sun
+.\"	Lafayette College
+.\"	sunyu@lafayette.edu
+.\"
+.\"
+.\"	Last Change: Thurs Feb 22 17:45:32:10 EDT 2018
+.\"
+.TH XWCSSHELL 1 "2018 February 22" "xwcsshell alpha"
+.\"
+.\"
+.de }1
+.ds ]X \&\\*(]B\\
+.nr )E 0
+.if !"\\$1"" .nr )I \\$1n
+.}f
+.ll \\n(LLu
+.in \\n()Ru+\\n(INu+\\n()Iu
+.ti \\n(INu
+.ie !\\n()Iu+\\n()Ru-\w\\*(]Xu-3p \{\\*(]X
+.br\}
+.el \\*(]X\h|\\n()Iu+\\n()Ru\c
+.}f
+..
+.\"
+.\" File Name macro.  This used to be `.PN', for Path Name
+.\"
+.de FN
+\fI\|\\$1\|\fP
+..
+.SH NAME
+xwcsshell \- a mini-shell
+.SH SYNOPSIS
+.B lsh>
+[options]
+[command_string | file]
+.SH DESCRIPTION
+.B xscsshell
+is an \fBsh\fR-compatible command language interpreter that
+executes commands read from the standard input or from a file.
+.B Bash
+also incorporates useful features from the \fIKorn\fP and \fIC\fP
+shells (\fBksh\fP and \fBcsh\fP).
+.B Bash
+can be configured to be POSIX-conformant by default.
+.SH ARGUMENTS
+If argument is not a built-in command or its variable. It is assumed to
+be the name of a file containing shell commands.
+If
+.B bash
+is invoked in this fashion,
+.B $0
+is set to the name of the file, and the positional parameters
+are set to the remaining arguments.
+.B Bash
+reads and executes commands from this file, then exits.
+\fBBash\fP's exit status is the exit status of the last command
+executed in the script.
+If no commands are executed, the exit status is 0.
+An attempt is first made to open the file in the current directory, and,
+if no file is found, then the shell searches the directories in
+.SM
+.B PATH
+for the script.
+.SH DEFINITIONS
+.PP
+The following definitions are used throughout the rest of this
+document.
+.PD 0
+.TP
+.B blank
+A space or tab.
+.TP
+.B word
+A sequence of characters considered as a single unit by the shell.
+Also known as a
+.BR token .
+.TP
+.B name
+A
+.I word
+consisting only of alphanumeric characters and underscores, and
+beginning with an alphabetic character or an underscore.  Also
+referred to as an
+.BR identifier .
+.TP
+.B metacharacter
+A character that, when unquoted, separates words.  One of the following:
+.br
+.RS
+.PP
+.if t \fB|   space  tab  newline\fP
+.if n \fB|   space tab newline\fP
+.RE
+.PP
+.TP
+.SH "SHELL GRAMMAR"
+.SS Simple Commands
+.PP
+A \fIsimple command\fP is a sequence of optional variable assignments
+followed by \fBblank\fP-separated words and redirections, and
+terminated by a \fIcontrol operator\fP.  The first word
+specifies the command to be executed, and is passed as argument zero.
+The remaining words are passed as arguments to the invoked command.
+.PP
+The return value of a \fIsimple command\fP is its exit status, or
+128+\fIn\^\fP if the command is terminated by signal
+.IR n .
+.SS Pipelines
+.PP
+A \fIpipeline\fP is a sequence of one or more commands separated by
+one of the control operators
+.B |
+or \fB|&\fP.
+The format for a pipeline is:
+.RS
+.PP
+[\fBtime\fP [\fB\-p\fP]] [ ! ] \fIcommand\fP [ [\fB|\fP\(bv\fB|&\fP] \fIcommand2\fP ... ]
+.RE
+.PP
+The standard output of
+.I command
+is connected via a pipe to the standard input of
+.IR command2 .
+This connection is performed before any redirections specified by the
+command (see
+.SM
+.B REDIRECTION
+below).
+If \fB|&\fP is used, \fIcommand\fP's standard error, in addition to its
+standard output, is connected to
+\fIcommand2\fP's standard input through the pipe;
+it is shorthand for \fB2>&1 |\fP.
+This implicit redirection of the standard error to the standard output is
+performed after any redirections specified by the command.
+.PP
+The return status of a pipeline is the exit status of the last
+command, unless the \fBpipefail\fP option is enabled.
+If \fBpipefail\fP is enabled, the pipeline's return status is the
+value of the last (rightmost) command to exit with a non-zero status,
+or zero if all commands exit successfully.
+If the reserved word
+.B !
+precedes a pipeline, the exit status of that pipeline is the logical
+negation of the exit status as described above.
+The shell waits for all commands in the pipeline to
+terminate before returning a value.
+.PP
+If the
+.B time
+reserved word precedes a pipeline, the elapsed as well as user and
+system time consumed by its execution are reported when the pipeline
+terminates.
+The \fB\-p\fP option changes the output format to that specified by POSIX.
+When the shell is in \fIposix mode\fP, it does not recognize
+\fBtime\fP as a reserved word if the next token begins with a `-'.
+The
+.SM
+.B TIMEFORMAT
+variable may be set to a format string that specifies how the timing
+information should be displayed; see the description of
+.SM
+.B TIMEFORMAT
+under
+.B "Shell Variables"
+below.
+.PP
+When the shell is in \fIposix mode\fP, \fBtime\fP
+may be followed by a newline.  In this case, the shell displays the
+total user and system time consumed by the shell and its children.
+The
+.SM
+.B TIMEFORMAT
+variable may be used to specify the format of
+the time information.
+.PP
+Each command in a pipeline is executed as a separate process (i.e., in a
+subshell).
+.SH QUOTING
+\fIQuoting\fP is used to remove the special meaning of certain
+characters or words to the shell.  Quoting can be used to
+disable special treatment for special characters, to prevent
+reserved words from being recognized as such, and to prevent
+parameter expansion.
+.PP
+Each of the \fImetacharacters\fP listed above under
+.SM
+.B DEFINITIONS
+has special meaning to the shell and must be quoted if it is to
+represent itself.
+.PP
+When the command history expansion facilities are being used
+(see
+.SM
+.B HISTORY EXPANSION
+below), the
+\fIhistory expansion\fP character, usually \fB!\fP, must be quoted
+to prevent history expansion.
+.PP
+There are three quoting mechanisms: the
+.IR "escape character" ,
+single quotes, and double quotes.
+.PP
+A non-quoted backslash (\fB\e\fP) is the
+.IR "escape character" .
+It preserves the literal value of the next character that follows,
+with the exception of <newline>.  If a \fB\e\fP<newline> pair
+appears, and the backslash is not itself quoted, the \fB\e\fP<newline>
+is treated as a line continuation (that is, it is removed from the
+input stream and effectively ignored).
+.PP
+Enclosing characters in single quotes preserves the literal value
+of each character within the quotes.  A single quote may not occur
+between single quotes, even when preceded by a backslash.
+.PP
+Enclosing characters in double quotes preserves the literal value
+of all characters within the quotes, with the exception of
+.BR $ ,
+.BR \` ,
+.BR \e ,
+and, when history expansion is enabled,
+.BR ! .
+When the shell is in \fIposix mode\fP, the \fB!\fP has no special meaning
+within double quotes, even when history expansion is enabled.
+The characters
+.B $
+and
+.B \`
+retain their special meaning within double quotes.  The backslash
+retains its special meaning only when followed by one of the following
+characters:
+.BR $ ,
+.BR \` ,
+\^\fB"\fP\^,
+.BR \e ,
+or
+.BR <newline> .
+A double quote may be quoted within double quotes by preceding it with
+a backslash.
+If enabled, history expansion will be performed unless an
+.B !
+appearing in double quotes is escaped using a backslash.
+The backslash preceding the
+.B !
+is not removed.
+.PP
+The special parameters
+.B *
+and
+.B @
+have special meaning when in double
+quotes (see
+.SM
+.B PARAMETERS
+below).
+.PP
+Words of the form \fB$\fP\(aq\fIstring\fP\(aq are treated specially.  The
+word expands to \fIstring\fP, with backslash-escaped characters replaced
+as specified by the ANSI C standard.  Backslash escape sequences, if
+present, are decoded as follows:
+.RS
+.PD 0
+.TP
+.B \ea
+alert (bell)
+.TP
+.B \eb
+backspace
+.TP
+.B \ee
+.TP
+.B \eE
+an escape character
+.TP
+.B \ef
+form feed
+.TP
+.B \en
+new line
+.TP
+.B \er
+carriage return
+.TP
+.B \et
+horizontal tab
+.TP
+.B \ev
+vertical tab
+.TP
+.B \e\e
+backslash
+.TP
+.B \e\(aq
+single quote
+.TP
+.B \e\(dq
+double quote
+.TP
+.B \e?
+question mark
+.TP
+.B \e\fInnn\fP
+the eight-bit character whose value is the octal value \fInnn\fP
+(one to three digits)
+.TP
+.B \ex\fIHH\fP
+the eight-bit character whose value is the hexadecimal value \fIHH\fP
+(one or two hex digits)
+.TP
+.B \eu\fIHHHH\fP
+the Unicode (ISO/IEC 10646) character whose value is the hexadecimal value
+\fIHHHH\fP (one to four hex digits)
+.TP
+.B \eU\fIHHHHHHHH\fP
+the Unicode (ISO/IEC 10646) character whose value is the hexadecimal value
+\fIHHHHHHHH\fP (one to eight hex digits)
+.TP
+.B \ec\fIx\fP
+a control-\fIx\fP character
+.PD
+.RE
+.LP
+The expanded result is single-quoted, as if the dollar sign had
+not been present.
+.PP
+A double-quoted string preceded by a dollar sign (\fB$\fP\(dq\fIstring\fP\(dq)
+will cause the string to be translated according to the current locale.
+If the current locale is \fBC\fP or \fBPOSIX\fP, the dollar sign
+is ignored.
+If the string is translated and replaced, the replacement is
+double-quoted.
+.SS Shell Variables
+.PP
+The following variables are set by the shell:
+.PP
+.PD 0
+.TP
+.B lshprompt
+Stores the prompt with the default value "lsh>".
+.TP
+.B PWD
+The current working directory as set by the
+.B cd
+command.
+.TP
+.B PATH
+The search path for commands.  It
+is a colon-separated list of directories in which
+the shell looks for commands (see
+.SM
+.B COMMAND EXECUTION
+below).
+A zero-length (null) directory name in the value of
+.SM
+.B PATH
+indicates the current directory.
+A null directory name may appear as two adjacent colons, or as an initial
+or trailing colon.
+The default path is system-dependent,
+and is set by the administrator who installs
+.BR bash .
+A common value is
+.na
+.if t \f(CW/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin\fP.
+.if n ``/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin''.
+.ad
+.PD
+.SS Arrays
+.B Bash
+provides one-dimensional indexed and associative array variables.
+Any variable may be used as an indexed array; the
+.B declare
+builtin will explicitly declare an array.
+There is no maximum
+limit on the size of an array, nor any requirement that members
+be indexed or assigned contiguously.
+Indexed arrays are referenced using integers (including arithmetic
+expressions) and are zero-based; associative arrays are referenced
+using arbitrary strings.
+Unless otherwise noted, indexed array indices must be non-negative integers.
+.PP
+An indexed array is created automatically if any variable is assigned to
+using the syntax \fIname\fP[\fIsubscript\fP]=\fIvalue\fP.  The
+.I subscript
+is treated as an arithmetic expression that must evaluate to a number.
+.PP
+Arrays are assigned to using compound assignments of the form
+\fIname\fP=\fB(\fPvalue\fI1\fP ... value\fIn\fP\fB)\fP, where each
+\fIvalue\fP is of the form [\fIsubscript\fP]=\fIstring\fP.
+Indexed array assignments do not require anything but \fIstring\fP.
+When assigning to indexed arrays, if the optional brackets and subscript
+are supplied, that index is assigned to;
+otherwise the index of the element assigned is the last index assigned
+to by the statement plus one.  Indexing starts at zero.
+.PP
+When assigning to an associative array, the subscript is required.
+.PP
+Any element of an array may be referenced using
+${\fIname\fP[\fIsubscript\fP]}.  The braces are required to avoid
+conflicts with pathname expansion.  If
+\fIsubscript\fP is \fB@\fP or \fB*\fP, the word expands to
+all members of \fIname\fP.  These subscripts differ only when the
+word appears within double quotes.  If the word is double-quoted,
+${\fIname\fP[*]} expands to a single
+word with the value of each array member separated by the first
+character of the
+.SM
+.B IFS
+special variable, and ${\fIname\fP[@]} expands each element of
+\fIname\fP to a separate word.  When there are no array members,
+${\fIname\fP[@]} expands to nothing.
+If the double-quoted expansion occurs within a word, the expansion of
+the first parameter is joined with the beginning part of the original
+word, and the expansion of the last parameter is joined with the last
+part of the original word.
+This is analogous to the expansion
+of the special parameters \fB*\fP and \fB@\fP (see
+.B Special Parameters
+above).  ${#\fIname\fP[\fIsubscript\fP]} expands to the length of
+${\fIname\fP[\fIsubscript\fP]}.  If \fIsubscript\fP is \fB*\fP or
+\fB@\fP, the expansion is the number of elements in the array.
+If the
+.I subscript
+used to reference an element of an indexed array
+evaluates to a number less than zero, it is
+interpreted as relative to one greater than the maximum index of the array,
+so negative indices count back from the end of the
+array, and an index of \-1 references the last element.
+.PP
+Referencing an array variable without a subscript is equivalent to
+referencing the array with a subscript of 0.
+Any reference to a variable using a valid subscript is legal, and
+.B bash
+will create an array if necessary.
+.PP
+An array variable is considered set if a subscript has been assigned a
+value.  The null string is a valid value.
+.PP
+It is possible to obtain the keys (indices) of an array as well as the values.
+${\fB!\fP\fIname\fP[\fI@\fP]} and ${\fB!\fP\fIname\fP[\fI*\fP]}
+expand to the indices assigned in array variable \fIname\fP.
+The treatment when in double quotes is similar to the expansion of the
+special parameters \fI@\fP and \fI*\fP within double quotes.
+.PD
+.SH "SIMPLE COMMAND EXPANSION"
+When a simple command is executed, the shell performs the following
+expansions, assignments, and redirections, from left to right.
+.IP 1.
+The words that the parser has marked as variable assignments (those
+preceding the command name).
+.IP 2.
+The words that are not variable assignments are expanded.
+If any words remain after expansion, the first word is taken to be
+the name of the command and the remaining words are the arguments.
+.IP 3.
+The text after the \fB=\fP in each variable assignment undergoes tilde
+expansion, parameter expansion, command substitution, arithmetic expansion,
+and quote removal before being assigned to the variable.
+.PP
+If no command name results, the variable assignments affect the current
+shell environment.  Otherwise, the variables are added to the environment
+of the executed command and do not affect the current shell environment.
+If any of the assignments attempts to assign a value to a readonly variable,
+an error occurs, and the command exits with a non-zero status. If one of
+the expansions contained a command substitution, the exit status of the
+command is the exit status of the last command substitution performed.  If
+there were no command substitutions, the command exits with a status of zero.
+.SH "COMMAND EXECUTION"
+After a command has been split into words, if it results in a
+simple command and an optional list of arguments, the following
+actions are taken.
+.PP
+ If the command has no slash, and there exists a shell function by
+  that command name, that function is invoked as described above in
+.SM
+.BR FUNCTIONS .
+If the name does not match a function, the shell searches for
+it in the list of shell builtins.  If a match is found, that
+builtin is invoked. Otherwise, prints an error "Command not
+found" and exits.
+.PP
+If the command name contains
+one or more slashes, the shell executes the named program in a
+separate execution environment.
+Argument 0 is set to the name given, and the remaining arguments
+to the command are set to the arguments given, if any.
+.SH COMMAND EXECUTION ENVIRONMENT
+The shell has an \fIexecution environment\fP, which consists of the
+following:
+.IP \(bu
+the current working directory as set by \fBcd\fP, \fBpushd\fP, or
+\fBpopd\fP, or inherited by the shell at invocation
+.IP \(bu
+the file creation mode mask as set by \fBumask\fP or inherited from
+the shell's parent
+.IP \(bu
+current traps set by \fBtrap\fP
+.IP \(bu
+shell parameters that are set by variable assignment or with \fBset\fP
+or inherited from the shell's parent in the environment
+.IP \(bu
+shell functions defined during execution or inherited from the shell's
+parent in the environment
+.IP \(bu
+various process IDs, including those of background jobs, the value
+of \fB$$\fP, and the value of
+.SM
+.B PPID
+.PP
+When a simple command other than a builtin or shell function
+is to be executed, it
+is invoked in a separate execution environment that consists of
+the following.  Unless otherwise noted, the values are inherited
+from the shell.
+.if n .sp 1
+.IP \(bu
+the shell's open files, plus any modifications and additions specified
+by redirections to the command
+.IP \(bu
+the current working directory
+.IP \(bu
+the file creation mode mask
+.IP \(bu
+shell variables and functions marked for export, along with variables
+exported for the command, passed in the environment
+.IP \(bu
+traps caught by the shell are reset to the values inherited from the
+shell's parent, and traps ignored by the shell are ignored
+.PP
+A command invoked in this separate environment cannot affect the
+shell's execution environment.
+.PP
+Command substitution, commands grouped with parentheses,
+and asynchronous commands are invoked in a
+subshell environment that is a duplicate of the shell environment,
+except that traps caught by the shell are reset to the values
+that the shell inherited from its parent at invocation.  Builtin
+commands that are invoked as part of a pipeline are also executed in a
+subshell environment.  Changes made to the subshell environment
+cannot affect the shell's execution environment.
+.PP
+Subshells spawned to execute command substitutions inherit the value of
+the \fB\-e\fP option from the parent shell.  When not in \fIposix\fP mode,
+\fBbash\fP clears the \fB\-e\fP option in such subshells.
+.PP
+If a command is followed by a \fB&\fP, It runs on the background. Otherwise,
+it runs on the foreground.
+
+
+
+
+
+
+.SH ENVIRONMENT
+When a program is invoked it is given an array of strings
+called the
+.IR environment .
+This is a list of
+\fIname\fP\-\fIvalue\fP pairs, of the form
+.IR "name\fR=\fPvalue" .
+.PP
+The shell can also remove a environment variable can be removed by call 
+"name\fR=\fP" .
+
+
+
+
+
+
+
+
+
+
+
+
+.SH SIGNALS
+When \fBxwscshell\fP is interactive, 
+.SM
+.B SIGINT
+is caught and handled (so that the \fBwait\fP builtin is interruptible).
+In all cases, \fBxwscshell\fP ignores
+.SM
+.BR SIGQUIT .
+If job control is in effect,
+.B bash
+ignores
+.SM
+.BR SIGTTIN ,
+.SM
+.BR SIGTTOU ,
+and
+.SM
+.BR SIGTSTP .
+.PP
+Non-builtin commands run by \fBxwscshellshell from its parent.
+When job control is not in effect, asynchronous commands
+ignore
+.SM
+.B SIGINT
+and
+.SM
+.B SIGQUIT
+in addition to these inherited handlers.
+Commands run as a result of command substitution ignore the
+keyboard-generated job control signals
+.SM
+.BR SIGTTIN ,
+.SM
+.BR SIGTTOU ,
+and
+.SM
+.BR SIGTSTP .
+.PP
+
+
+
+
+
+
+
+
+.SH "JOB CONTROL"
+.I Job control
+refers to the ability to selectively stop (\fIsuspend\fP)
+the execution of processes and continue (\fIresume\fP)
+their execution at a later point.  A user typically employs
+this facility via an interactive interface supplied jointly
+by the operating system kernel's terminal driver and
+.BR xwcsshell .
+.PP
+The shell associates a
+.I job
+with each pipeline.  It keeps an arry of currently executing
+jobs, which may be listed with the
+.B jobs
+command.  When
+.B xwcsshell
+starts a job asynchronously (in the
+.IR background ),
+it prints a line that looks like:
+.RS
+.PP
+[1] 25647 ./myspin 10 & 
+.RE
+.PP
+indicating that this job is job number 1 and that the process ID is 25647.
+.PP
+To facilitate the implementation of the user interface to job
+control, the operating system maintains the notion of a \fIcurrent terminal
+process group ID\fP.  Members of this process group (processes whose
+process group ID is equal to the current terminal process group ID)
+receive keyboard-generated signals such as
+.SM
+.BR SIGINT .
+These processes are said to be in the
+.IR foreground .
+.I Background
+processes are those whose process group ID differs from the terminal's;
+such processes are immune to keyboard-generated signals.
+Only foreground processes are allowed to read from or, if the
+user so specifies with \f(CWstty tostop\fP, write to the
+terminal.
+Background processes which attempt to read from (write to when
+\f(CWstty tostop\fP is in effect) the
+terminal are sent a
+.SM
+.B SIGTTIN (SIGTTOU)
+signal by the kernel's terminal driver, 
+which, unless caught, suspends the process.
+.PP
+If the operating system on which
+.B xwcsshell
+is running supports
+job control,
+.B bash
+contains facilities to use it.
+Typing the
+.I suspend
+character (typically
+.BR ^Z ,
+Control-Z) while a process is running
+causes that process to be stopped and returns control to
+.BR bash .
+Typing the
+.I "delayed suspend"
+character (typically
+.BR ^Y ,
+Control-Y) causes the process to be stopped when it
+attempts to read input from the terminal, and control to
+be returned to
+.BR bash .
+The user may then manipulate the state of this job, using the
+.B bg
+command to continue it in the background, the
+.B fg
+command to continue it in the foreground, or
+the
+.B kill
+command to kill it.  A \fB^Z\fP takes effect immediately,
+and has the additional side effect of causing pending output
+and typeahead to be discarded.
+.PP
+There are a number of ways to refer to a job in the shell.
+The character
+.B %
+introduces a job specification (\fIjobspec\fP).  Job number
+.I n
+may be referred to as
+.BR %n .
+A job may also be referred to using a prefix of the name used to
+start it, or using a substring that appears in its command line.
+For example,
+.B %ce
+refers to a stopped
+.B ce
+job.  If a prefix matches more than one job,
+.B bash
+reports an error. 
+
+.B "SHELL BUILTIN COMMANDS"
+below).
+.PD
+
+
+.SH "SHELL BUILTIN COMMANDS"
+.\" start of bash_builtins
+.zZ
+.PP
+.sp .5
+.PD 0
+.TP
+\fB:\fP [\fIarguments\fP]
+.PD
+No effect; the command does nothing beyond expanding
+.I arguments
+and performing any specified
+redirections.
+The return status is zero.
+.TP
+\fB .\| \fP \fIfilename\fP [\fIarguments\fP]
+.PD 0
+.TP
+\fBbg\fP [\fIjobspec\fP ...]
+Resume each suspended job \fIjobspec\fP in the background, as if it
+had been started with
+.BR & .
+If
+.I jobspec
+is not present, the shell's notion of the \fIcurrent job\fP is used.
+.B bg
+.I jobspec
+returns 0 unless run when job control is disabled or, when run with
+job control enabled, any specified \fIjobspec\fP was not found
+or was started without job control.
+.TP
+\fBecho\fP [\fB\-neE\fP] [\fIarg\fP ...]
+Output the \fIarg\fPs, separated by spaces, followed by a newline.
+
+
+.TP
+\fBfg\fP [\fIjobspec\fP]
+Resume
+.I jobspec
+in the foreground, and make it the current job.
+
+.TP
+\fBjobs\fP [\fB\-LP\fP]
+Print the the job list.
+
+.TP
+\fBpwd\fP [\fB\-LP\fP]
+Print the absolute pathname of the current working directory.
+
+
+.TP
+\fBquit\fP [\fB\-LP\fP]
+Quit from this shell.
+
+
+.PD
+.SH "SEE ALSO"
+.PD 0
+.TP
+\fIComputer Systems: A Programmer's Perspective\fP, Randal E. Bryant and David R. O'Hallaron
+.TP
+\fIUnix Shell, Wikipedia\fP,
+https://en.wikipedia.org/wiki/Unix_shell
+.TP
+\fIPipeline, Wikipedia\fP,
+https://en.wikipedia.org/wiki/Pipeline_(Unix)
+.TP
+\fIHow Linux pipes work under the hood, Brandon Wamboldt\fP,
+https://brandonwamboldt.ca/how-linux-pipes-work-under-the-hood-1518/
+
+.PD
+
+
+
+.SH AUTHORS
+Xiaoshi Wang, Lafayette College
+.br
+wangxi@lafayette.edu
+.PP
+Yuchen Sun, Lafayette College
+.br
+sunyu@lafayette.edu
+.SH BUG REPORTS
+If you find a bug in
+.B xwcsshell
+, you scan report it.  But first, you should
+make sure that it really is a bug, and that it appears in the later
+version of
+.B xwcsshell
+, if there is a later version. Contact wangxi@lafayette.edu.
+.PD
+
+.zZ
+.zY
