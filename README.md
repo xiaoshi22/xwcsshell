@@ -65,7 +65,7 @@ The tar file should include a Makefile in the top level src directory for creati
 
 Example command sequence:
 
-```
+```bash
 lsh> stats -l
 No stats enabled
 lsh> stats -u -s
@@ -86,7 +86,7 @@ stats -u -s
 
 Then every command that is not built-in, that is run after the stats are set, will print usage and system statistics after it completes.  The commands will do that until stats are cleared with the stats -c command.
 
-```
+```bash
 lsh> stats -u -s 
 lsh> cat * | wc
 12696   59669  456985
