@@ -1,7 +1,5 @@
 # Project 1: Write a Shell
-
 Team members: Xiaoshi Wang, Yuchen Sun
-
 ## Directory Structure
 ```
 -xwcsshell
@@ -31,8 +29,7 @@ Team members: Xiaoshi Wang, Yuchen Sun
 ```
 
 ## User Manual
-	The Makefile in the top level of src directory is designed for creating the executable and proceeding other instructions in the more efficient way. The following shows commands provided by our Makefile. Notice that those commands should be executed at the src directory.
-
+The Makefile in the top level of src directory is designed for creating the executable and proceeding other instructions in the more efficient way. The following shows commands provided by our Makefile. Notice that those commands should be executed at the src directory.
 ```
 	make
 		build .o files in LSHPATH/lsh/src/obj folder, then create the excutable in LSHPATH/lsh/install/bin
