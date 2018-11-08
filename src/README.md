@@ -45,4 +45,4 @@ The Makefile in the top level of src directory is designed for creating the exec
   - make run
     -recreate the executable, then run it (can get our shell run in a easier way, but do not recommand if dealing with signals. Be careful when run it! )
 - make installman
-  - isntall the man xwcsshell.1 into the user's computer
+  - install the man xwcsshell.1 into the user's computer
